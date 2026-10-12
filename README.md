@@ -249,4 +249,3 @@ All of it was directed and reviewed by the project author.
 [GPL-2.0-or-later](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html). Behaviour, keyboard shortcuts,
 format lists and equalizer presets follow VLC media player by the VideoLAN team. AAPlayer is not affiliated
 with or endorsed by VideoLAN. FFmpeg is licensed under the LGPL/GPL; see the bundled FFmpeg license file.
-# AAPlayer
