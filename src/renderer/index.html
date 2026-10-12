@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: http://127.0.0.1:*; media-src http://127.0.0.1:* blob:; connect-src http://127.0.0.1:*">
+  <title>AAPlayer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <main id="stage">
+      <video id="video" crossorigin="anonymous" preload="auto" disablepictureinpicture></video>
+      <canvas id="vcanvas" hidden></canvas>
+      <div id="audio-art" hidden>
+        <div class="disc"><svg viewBox="0 0 64 64"><use href="#i-logo"/></svg></div>
+        <div id="audio-title"></div>
+        <div id="audio-sub"></div>
+        <canvas id="viz" hidden></canvas>
+      </div>
+      <div id="subtitles" aria-live="polite"></div>
+      <div id="spinner" hidden><div></div></div>
+      <div id="flash" aria-hidden="true"></div>
+      <div id="osd" role="status"></div>
+      <div id="resume-bar" hidden>
+        <span id="resume-text"></span>
+        <button id="resume-restart" type="button">Start over</button>
+        <button id="resume-dismiss" type="button" aria-label="Dismiss">✕</button>
+      </div>
+
+      <section id="empty">
+        <div class="brand">
+          <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><use href="#i-logo"/></svg>
+          <h1>AAPlayer</h1>
+          <p>Drop video or audio files here, or open something to start.</p>
+        </div>
+        <div class="empty-actions">
+          <button type="button" data-action="open-file" class="primary"><svg><use href="#i-file"/></svg>Open file <kbd>Ctrl+O</kbd></button>
+          <button type="button" data-action="open-folder"><svg><use href="#i-folder"/></svg>Open folder <kbd>Ctrl+F</kbd></button>
+          <button type="button" data-action="open-network"><svg><use href="#i-link"/></svg>Network stream <kbd>Ctrl+N</kbd></button>
+        </div>
+      </section>
+
+      <div id="controls">
+        <div class="seek-row">
+          <span id="time-cur" class="time">0:00</span>
+          <div id="seek" role="slider" tabindex="0" aria-label="Seek" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+            <div class="track"><div id="seek-buffer"></div><div id="seek-fill"></div><div id="seek-chapters"></div></div>
+            <div id="seek-knob"></div>
+            <div id="seek-tip" hidden><img id="seek-thumb" alt=""><span id="seek-tip-time"></span><span id="seek-tip-chapter"></span></div>
+          </div>
+          <span id="time-dur" class="time" title="Click to toggle remaining time">0:00</span>
+        </div>
+        <div id="advanced-row" class="button-row" hidden>
+          <button id="adv-record" type="button" title="Record (Shift+R)"><svg><use href="#i-rec"/></svg></button>
+          <button id="adv-snapshot" type="button" title="Take snapshot (Shift+S)"><svg><use href="#i-camera"/></svg></button>
+          <button id="adv-ab" type="button" class="text" title="Loop from A to B (Shift+L)">A→B</button>
+          <button id="adv-frame" type="button" title="Next frame (E)"><svg><use href="#i-frame"/></svg></button>
+          <button id="adv-effects" type="button" title="Effects and Filters (Ctrl+E)"><svg><use href="#i-sliders"/></svg></button>
+        </div>
+        <div id="toolbar" class="button-row">
+          <button data-tb="play" id="btn-play" type="button" class="big" title="Play/Pause (Space)"><svg><use href="#i-play"/></svg></button>
+          <button data-tb="prev" id="btn-prev" type="button" title="Previous (P)"><svg><use href="#i-prev"/></svg></button>
+          <button data-tb="stop" id="btn-stop" type="button" title="Stop (S)"><svg><use href="#i-stop"/></svg></button>
+          <button data-tb="next" id="btn-next" type="button" title="Next (N)"><svg><use href="#i-next"/></svg></button>
+          <button data-tb="loop" id="btn-loop" type="button" title="Loop (L)"><svg><use href="#i-loop"/></svg><span id="loop-badge"></span></button>
+          <button data-tb="random" id="btn-random" type="button" title="Random (R)"><svg><use href="#i-shuffle"/></svg></button>
+          <button data-tb="playlist" id="btn-playlist" type="button" title="Playlist (Ctrl+L)"><svg><use href="#i-list"/></svg></button>
+          <button data-tb="record" id="tb-record" type="button" title="Record (Shift+R)"><svg><use href="#i-rec"/></svg></button>
+          <button data-tb="snapshot" id="tb-snapshot" type="button" title="Take snapshot (Shift+S)"><svg><use href="#i-camera"/></svg></button>
+          <button data-tb="ab" id="tb-ab" type="button" class="text" title="Loop from A to B (Shift+L)">A→B</button>
+          <button data-tb="frame" id="tb-frame" type="button" title="Next frame (E)"><svg><use href="#i-frame"/></svg></button>
+          <button data-tb="effects" id="tb-effects" type="button" title="Effects and Filters (Ctrl+E)"><svg><use href="#i-sliders"/></svg></button>
+          <div data-tb="mode" id="mode-chip" class="chip" hidden title="How AAPlayer is decoding this file (Ctrl+J for details)"></div>
+          <div data-tb="spacer" class="spacer"></div>
+          <button data-tb="speed" id="btn-speed" type="button" class="text" title="Playback speed (+ / -)">1.00×</button>
+          <button data-tb="audio" id="btn-audio" type="button" title="Audio track (B)"><svg><use href="#i-audio"/></svg></button>
+          <button data-tb="subs" id="btn-subs" type="button" title="Subtitles (V)"><svg><use href="#i-cc"/></svg></button>
+          <button data-tb="mute" id="btn-mute" type="button" title="Mute (M)"><svg><use href="#i-vol"/></svg></button>
+          <div data-tb="volume" class="tb-volume">
+            <div id="volume" role="slider" tabindex="0" aria-label="Volume" aria-valuemin="0" aria-valuemax="200">
+              <div class="track"><div id="volume-fill"></div><div class="mark100"></div></div>
+            </div>
+            <span id="volume-text" class="vol-text">100%</span>
+          </div>
+          <button data-tb="fullscreen" id="btn-fullscreen" type="button" title="Fullscreen (F)"><svg><use href="#i-full"/></svg></button>
+        </div>
+      </div>
+      <div id="popover" hidden></div>
+    </main>
+
+    <aside id="playlist" hidden>
+      <header>
+        <h2>Playlist <span id="pl-count"></span></h2>
+        <div class="pl-actions">
+          <button type="button" data-action="open-file" title="Add files"><svg><use href="#i-plus"/></svg></button>
+          <button type="button" id="pl-save" title="Save playlist (Ctrl+Y)"><svg><use href="#i-save"/></svg></button>
+          <button type="button" id="pl-clear" title="Clear playlist"><svg><use href="#i-trash"/></svg></button>
+        </div>
+      </header>
+      <input id="pl-search" type="search" placeholder="Search playlist" spellcheck="false">
+      <ol id="pl-list" tabindex="0"></ol>
+      <p id="pl-empty">Drop files here or use Media › Open.</p>
+    </aside>
+  </div>
+
+  <footer id="statusbar" hidden><span id="sb-rec" hidden>● REC</span><span id="sb-mode"></span><span id="sb-info"></span><span class="sb-spacer"></span><span id="sb-rate"></span><span id="sb-time"></span></footer>
+
+  <dialog id="fx-dialog"><header><h2>Adjustments and Effects</h2><button type="button" class="x" id="fx-close" aria-label="Close">✕</button></header>
+    <nav id="fx-tabs"><button type="button" data-tab="audio" class="on">Audio Effects</button><button type="button" data-tab="video">Video Effects</button><button type="button" data-tab="sync">Synchronization</button></nav>
+    <div id="fx-body"></div></dialog>
+  <dialog id="dialog"><form method="dialog" id="dialog-form"><header><h2 id="dialog-title"></h2><button value="cancel" class="x" aria-label="Close">✕</button></header><div id="dialog-body"></div><footer id="dialog-footer"></footer></form></dialog>
+  <div id="drop-hint" hidden><div>Drop to play</div></div>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-logo" viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff3d6e"/></linearGradient></defs><rect x="4" y="4" width="56" height="56" rx="16" fill="url(#lg)"/><g transform="translate(32 32) scale(0.78) translate(-32 -32)"><path d="M10.5 46 20.5 18 30.5 46M14.5 37.5h12M33.5 46 43.5 18 53.5 46" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 34.5v6l4.8-3z" fill="#fff"/></g></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z" fill="currentColor"/></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6.5" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24"><path d="M7 6v12M18 6.5v11a.6.6 0 0 1-.95.5L9.5 12.5a.6.6 0 0 1 0-1L17.05 6a.6.6 0 0 1 .95.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="i-next" viewBox="0 0 24 24"><path d="M17 6v12M6 6.5v11a.6.6 0 0 0 .95.5l7.55-5.5a.6.6 0 0 0 0-1L6.95 6A.6.6 0 0 0 6 6.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="i-loop" viewBox="0 0 24 24"><path d="M17 3l3 3-3 3M20 6H8a4 4 0 0 0-4 4v1M7 21l-3-3 3-3M4 18h12a4 4 0 0 0 4-4v-1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h12M4 12h12M4 18h8M19 15v6l3-3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-audio" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="currentColor"/><circle cx="17.5" cy="16" r="2.5" fill="currentColor"/></symbol>
+      <symbol id="i-cc" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 10.2a2.2 2.2 0 1 0 0 3.6M17 10.2a2.2 2.2 0 1 0 0 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+      <symbol id="i-vol" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5Z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5v5h3.5L12 19V5L7.5 9.5Z" fill="currentColor"/><path d="m16 9.5 5 5m0-5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-unfull" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="#ff4d4d"/></symbol>
+      <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-2.5h6L17 8h3v11H4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+      <symbol id="i-frame" viewBox="0 0 24 24"><path d="M5 6v12l8-6Z" fill="currentColor"/><path d="M17 6v12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+      <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M6 4v16M12 4v16M18 4v16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect x="3.5" y="13" width="5" height="3" rx="1" fill="currentColor"/><rect x="9.5" y="7" width="5" height="3" rx="1" fill="currentColor"/><rect x="15.5" y="15" width="5" height="3" rx="1" fill="currentColor"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Zm0 0v5h5M10 12.5v5l4-2.5Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 4h11l3 3v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1Zm3 0v5h7V4M8 20v-6h8v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <script src="../shared/vtt.js"></script>
+  <script src="engine.js"></script>
+  <script src="audiofx.js"></script>
+  <script src="videofx.js"></script>
+  <script src="visualizer.js"></script>
+  <script src="presenter.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

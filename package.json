@@ -1,0 +1,95 @@
+{
+  "name": "aaplayer",
+  "productName": "AAPlayer",
+  "version": "0.1.0",
+  "description": "AAPlayer - a VLC-inspired media player built with Electron, Chromium media and FFmpeg",
+  "main": "src/main/main.js",
+  "license": "GPL-2.0-or-later",
+  "author": "chuks",
+  "scripts": {
+    "start": "node scripts/start.js",
+    "test": "node --test \"test/*.test.js\"",
+    "icon": "node -e \"delete process.env.ELECTRON_RUN_AS_NODE;require('child_process').spawnSync(require('electron'),['scripts/make-icon.js'],{stdio:'inherit',env:process.env})\"",
+    "dist": "electron-builder --win",
+    "dist:dir": "electron-builder --win --dir",
+    "menu-icons": "node -e \"delete process.env.ELECTRON_RUN_AS_NODE;require('child_process').spawnSync(require('electron'),['scripts/make-menu-icons.js'],{stdio:'inherit',env:process.env})\""
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.aaplayer.app",
+    "productName": "AAPlayer",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json",
+      "!node_modules/ffmpeg-ffprobe-static/{example.js,install.js}"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-ffprobe-static/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false
+    },
+    "fileAssociations": [
+      {
+        "ext": [
+          "mkv",
+          "mp4",
+          "m4v",
+          "avi",
+          "mov",
+          "webm",
+          "ts",
+          "m2ts",
+          "mts",
+          "wmv",
+          "flv",
+          "mpg",
+          "mpeg",
+          "vob",
+          "ogv",
+          "3gp"
+        ],
+        "name": "Video file",
+        "description": "Video file",
+        "role": "Viewer"
+      },
+      {
+        "ext": [
+          "mp3",
+          "flac",
+          "m4a",
+          "aac",
+          "ogg",
+          "opus",
+          "wav",
+          "wma",
+          "ac3",
+          "dts",
+          "mka"
+        ],
+        "name": "Audio file",
+        "description": "Audio file",
+        "role": "Viewer"
+      }
+    ]
+  },
+  "dependencies": {
+    "ffmpeg-ffprobe-static": "6.1.1"
+  }
+}

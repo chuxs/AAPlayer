@@ -1,0 +1,21 @@
+diff --git a/modules/codec/avcodec/va_surface.c b/modules/codec/avcodec/va_surface.c
+index 0a1cd6d..e411c40 100644
+--- a/modules/codec/avcodec/va_surface.c
++++ b/modules/codec/avcodec/va_surface.c
+@@ -138,7 +138,15 @@ vlc_va_surface_t *va_pool_Get(va_pool_t *va_pool)
+     if (unlikely(va_pool->surface_count == 0))
+         return NULL;
+ 
+-    vlc_sem_wait(&va_pool->available_surfaces);
++    /* Never wait forever: all surfaces may be held by the decoder references
++     * and by pictures queued in the vout while it is prerolling/buffering
++     * (typically at the start of 10-bit HEVC/H.264 with many frame threads).
++     * An unbounded wait deadlocks the decoder thread, and anything joining it
++     * (stop, seek, close) hangs the whole player. Fail the allocation instead,
++     * as documented in va_surface.h, so lavc drops the frame and recovers. */
++    if (vlc_sem_timedwait(&va_pool->available_surfaces,
++                          vlc_tick_now() + VLC_TICK_FROM_SEC(1)))
++        return NULL;
+     surface = GetSurface(va_pool);
+     assert(surface != NULL);
+     return surface;
