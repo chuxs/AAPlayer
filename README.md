@@ -3,11 +3,10 @@
 <img src="build/icon.png" alt="AAPlayer icon" width="96" align="right">
 
 A desktop media player modelled on VLC, built with **Electron**, Chromium's media stack and **FFmpeg**.
-It has VLC's menus, keyboard shortcuts and supported formats. It was also built to avoid a VLC problem
-where some "10bit" videos freeze the player until it has to be killed from Task Manager.
+It has VLC's menus, keyboard shortcuts and supported formats.
 
 - Plays almost anything VLC plays: MKV, MP4, AVI, TS, WebM, DVD/Blu-ray folders, network streams and capture devices
-- 10-bit HEVC and H.264 ("Hi10P"), HDR tone mapping and hardware decoding, with automatic recovery if decoding stalls
+- HEVC, H.264, VP9 and AV1, HDR tone mapping and hardware decoding, with automatic recovery if decoding stalls
 - VLC-style menus, toolbar and shortcuts, a playlist, subtitles, audio/video effects, an equalizer, conversion and recording
 - A web remote and home-network streaming, both protected by a PIN and turned off until you enable them
 
@@ -26,7 +25,6 @@ where some "10bit" videos freeze the player until it has to be killed from Task 
 - [Tests](#tests)
 - [Technologies used](#technologies-used)
 - [Features](#features)
-- [The "10bit" problem](#the-10bit-problem)
 - [Project structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
 - [Limitations](#limitations)
@@ -53,7 +51,7 @@ npm start
 | Internet connection | for `npm install` | Downloads Electron and the bundled FFmpeg binaries |
 | FFmpeg | optional | A matching FFmpeg/ffprobe 6.1 is bundled. If a newer `ffmpeg` is on your `PATH`, AAPlayer uses it automatically |
 
-A GPU with hardware video decoding (Intel, NVIDIA or AMD) is recommended for 4K and 10-bit HEVC. It is not
+A GPU with hardware video decoding (Intel, NVIDIA or AMD) is recommended for 4K and HEVC video. It is not
 required.
 
 ## Setup
@@ -61,7 +59,7 @@ required.
 1. **Clone the repository**
 
    ```sh
-   git clone https://github.com/<your-username>/AAPlayer.git
+   git clone https://github.com/chuxs/AAPlayer.git
    cd AAPlayer
    ```
 
@@ -110,7 +108,7 @@ npm test
 ```
 
 The tests use Node's built-in test runner (`node --test`). They cover:
-- the playback planner, including 10-bit, HDR and remux decisions
+- the playback planner, including HDR and remux decisions
 - ffprobe parsing and the WebVTT subtitle parser
 - the convert and disc helpers
 - the security of the web remote and the streaming server (PIN login, rate limiting, Host/Origin checks)
@@ -190,37 +188,6 @@ No network access is needed.
 
 ---
 
-## The "10bit" problem
-
-Some videos with `10bit` in their name freeze VLC near the start, and VLC has to be killed from Task
-Manager. **The file name is not the cause.** VLC never looks at it. Release groups add `10bit` because the
-video itself is 10-bit: usually HEVC Main 10, or H.264 High 10 ("Hi10P").
-
-**Likely cause in VLC.** With hardware decoding on Windows, decoded frames live in a fixed pool of GPU
-surfaces. 10-bit HEVC uses the most of them: reference frames, plus decoder threads, plus frames waiting
-to be shown. In the VLC 4 source (`modules/codec/avcodec/va_surface.c`), `va_pool_Get()` waits for a free
-surface **with no time limit**, even though its documentation says it returns on timeout. When the pool
-runs out, typically while buffering at the start or after a seek, the decoder waits forever. Stop and
-close then wait on the decoder, so the whole player freezes.
-
-A proposed fix for VLC is in
-[`patches/0001-avcodec-va_surface-bound-surface-wait.patch`](patches/0001-avcodec-va_surface-bound-surface-wait.patch).
-It makes the wait time out after 1 second, so one frame is dropped instead of the player locking up. The
-patch has not been compiled or tested. To try it, apply it to a VLC source checkout with `git apply`. The
-VLC source is not included in this repository.
-
-**How AAPlayer avoids it:**
-1. It decides from the video stream itself (`ffprobe`: codec, bit depth, chroma, HDR), never the file name.
-2. Decoding runs outside the UI, in an FFmpeg process or Chromium's media process, so a stuck decoder can't
-   freeze the window.
-3. A watchdog restarts stalled playback and, if needed, switches to converting the video to standard 8-bit
-   H.264.
-
-It also works around a Chromium display bug on some Intel GPUs that shows white specks in dark areas of
-10-bit video (Preferences › 10-bit display fix).
-
----
-
 ## Project structure
 
 ```
@@ -244,7 +211,6 @@ src/
   shared/vtt.js    subtitle parser
 scripts/           dev launcher, icon generators
 test/              unit tests
-patches/           proposed VLC fix
 build/             app icon
 ```
 
@@ -272,7 +238,7 @@ build/             app icon
 
 AAPlayer was created with the help of **[Claude](https://www.anthropic.com/claude)**, Anthropic's AI
 assistant, using **[Claude Code](https://www.anthropic.com/claude-code)**. Claude helped with:
-- researching VLC's source and the "10bit" freeze
+- researching VLC's source code
 - designing and writing the code and tests
 - debugging the app by driving it and checking screenshots
 
